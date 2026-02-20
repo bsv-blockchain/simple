@@ -4,6 +4,10 @@
   "description": "Simplified, modular helper library for BSV blockchain development",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bsv-blockchain/simple.git"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
