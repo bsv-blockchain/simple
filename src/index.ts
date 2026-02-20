@@ -12,11 +12,7 @@ export {
   toVerifiablePresentation
 } from './modules/credentials'
 
-// Server-only exports
-export { ServerWallet } from './server'
-export { FileRevocationStore } from './modules/file-revocation-store'
-
-// Types
+// Types (browser-safe only)
 export type {
   Network,
   WalletDefaults,
@@ -47,9 +43,6 @@ export type {
   OverlayInfo,
   OverlayBroadcastResult,
   OverlayOutput,
-  ServerWalletConfig,
-  PaymentRequest,
-  IncomingPayment,
   DIDDocument,
   DIDVerificationMethod,
   DIDParseResult,

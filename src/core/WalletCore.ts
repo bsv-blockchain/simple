@@ -198,7 +198,7 @@ export abstract class WalletCore {
       if (changeBasket) {
         if (result.tx) {
           const skipIndexes = actionOutputs.map((_: any, i: number) => i)
-          reinternalized = await this.reinternalizeChange(result.tx, changeBasket, skipIndexes)
+          reinternalized = await this.reinternalizeChange(result.tx as number[], changeBasket, skipIndexes)
         } else {
           reinternalized = { count: 0, errors: ['result.tx is missing from createAction response'] }
         }
@@ -266,7 +266,7 @@ export abstract class WalletCore {
       if (changeBasket) {
         if (result.tx) {
           const skipIndexes = outputs.map((_: any, i: number) => i)
-          reinternalized = await this.reinternalizeChange(result.tx, changeBasket, skipIndexes)
+          reinternalized = await this.reinternalizeChange(result.tx as number[], changeBasket, skipIndexes)
         } else {
           reinternalized = { count: 0, errors: ['result.tx is missing from createAction response'] }
         }
@@ -338,7 +338,7 @@ export abstract class WalletCore {
       if (effectiveChangeBasket) {
         if (result.tx) {
           const skipIndexes = outputs.map((_: any, i: number) => i)
-          reinternalized = await this.reinternalizeChange(result.tx, effectiveChangeBasket, skipIndexes)
+          reinternalized = await this.reinternalizeChange(result.tx as number[], effectiveChangeBasket, skipIndexes)
         } else {
           reinternalized = { count: 0, errors: ['result.tx is missing from createAction response'] }
         }

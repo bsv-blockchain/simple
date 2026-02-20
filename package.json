@@ -42,10 +42,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@bsv/sdk": "^1.10.1",
-    "@bsv/wallet-toolbox": "^1.8.2",
-    "@bsv/message-box-client": "^1.4.5",
-    "dotenv": "^16.4.7"
+    "@bsv/message-box-client": "^2.0.2",
+    "@bsv/sdk": "^2.0.4",
+    "@bsv/wallet-toolbox": "^2.0.19"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

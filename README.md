@@ -25,8 +25,8 @@ A high-level TypeScript library that makes BSV blockchain development simple. Bu
 
 The library has two entry points:
 
-- **`@bsv/simple/browser`** — Uses `WalletClient` from `@bsv/sdk` to connect to the user's browser wallet extension (MetaNet Client). No private keys in the browser.
-- **`@bsv/simple/server`** — Uses `@bsv/wallet-toolbox` to run a wallet from a private key on the server. Used for automated operations, payment processing, and funding flows.
+- **`@bsv/simple`** — Uses `WalletClient` from `@bsv/sdk` to connect to the user's wallet on the client side.
+- **`@bsv/simple/server`** — Uses `@bsv/wallet-toolbox` to run a server side wallet from a private key. Used for agents, or servers receiving payments.
 
 Both entry points provide the same API surface — the only difference is how they connect to the underlying wallet.
 
@@ -54,6 +54,6 @@ const did = wallet.getDID()
 
 ## Next Steps
 
-- [Quick Start](quick-start.md) — Get running in 5 minutes
-- [Installation](installation.md) — Detailed setup instructions
-- [Architecture](architecture.md) — How the library is built
+- [Quick Start](docs/quick-start.md) — Get running in 5 minutes
+- [Installation](docs/installation.md) — Detailed setup instructions
+- [Architecture](docs/architecture.md) — How the library is built

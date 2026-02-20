@@ -94,7 +94,7 @@ export function createMessageBoxMethods(core: WalletCore) {
         const effectiveChangeBasket = changeBasket ?? core.defaults.changeBasket
         if (effectiveChangeBasket) {
           if (paymentToken?.transaction) {
-            reinternalized = await core.reinternalizeChange(paymentToken.transaction, effectiveChangeBasket, [0])
+            reinternalized = await core.reinternalizeChange(paymentToken.transaction as number[], effectiveChangeBasket, [0])
           } else {
             reinternalized = { count: 0, errors: ['paymentToken.transaction is missing'] }
           }

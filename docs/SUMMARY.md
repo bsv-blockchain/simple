@@ -1,6 +1,6 @@
 # Table of Contents
 
-* [Introduction](README.md)
+* [Introduction](INTRO.md)
 * [Quick Start](quick-start.md)
 * [Installation](installation.md)
 * [Architecture](architecture.md)
