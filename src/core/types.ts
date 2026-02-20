@@ -84,7 +84,7 @@ export interface PaymentOptions {
 export interface SendOutputSpec {
   to?: string
   satoshis?: number
-  data?: (string | object | number[])[]
+  data?: Array<string | object | number[]>
   description?: string
   basket?: string
   protocolID?: [number, string]
@@ -236,7 +236,7 @@ export interface OverlayInfo {
 export interface OverlayBroadcastResult {
   success: boolean
   txid?: string
-  steak?: Record<string, { outputsToAdmit: number[]; coinsToRetain: number[]; coinsRemoved?: number[] }>
+  steak?: Record<string, { outputsToAdmit: number[], coinsToRetain: number[], coinsRemoved?: number[] }>
   code?: string
   description?: string
 }
@@ -314,7 +314,7 @@ export interface CredentialFieldSchema {
   required?: boolean
   placeholder?: string
   format?: string
-  options?: { value: string; label: string }[]
+  options?: Array<{ value: string, label: string }>
   helpText?: string
   group?: string
 }
@@ -325,7 +325,7 @@ export interface CredentialSchemaConfig {
   description?: string
   certificateTypeBase64?: string
   fields: CredentialFieldSchema[]
-  fieldGroups?: { key: string; label: string }[]
+  fieldGroups?: Array<{ key: string, label: string }>
   validate?: (values: Record<string, string>) => string | null
   computedFields?: (values: Record<string, string>) => Record<string, string>
 }
@@ -404,9 +404,9 @@ export interface RevocationRecord {
 }
 
 export interface RevocationStore {
-  save(serialNumber: string, record: RevocationRecord): Promise<void>
-  load(serialNumber: string): Promise<RevocationRecord | undefined>
-  delete(serialNumber: string): Promise<void>
-  has(serialNumber: string): Promise<boolean>
-  findByOutpoint(outpoint: string): Promise<boolean>
+  save: (serialNumber: string, record: RevocationRecord) => Promise<void>
+  load: (serialNumber: string) => Promise<RevocationRecord | undefined>
+  delete: (serialNumber: string) => Promise<void>
+  has: (serialNumber: string) => Promise<boolean>
+  findByOutpoint: (outpoint: string) => Promise<boolean>
 }

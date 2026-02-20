@@ -28,26 +28,26 @@ export abstract class WalletCore {
   public readonly identityKey: string
   public readonly defaults: WalletDefaults
 
-  constructor(identityKey: string, defaults?: Partial<WalletDefaults>) {
+  constructor (identityKey: string, defaults?: Partial<WalletDefaults>) {
     this.identityKey = identityKey
-    this.defaults = mergeDefaults(defaults || {})
+    this.defaults = mergeDefaults(defaults ?? {})
   }
 
-  abstract getClient(): WalletInterface
+  abstract getClient (): WalletInterface
 
   // ============================================================================
   // Wallet Info
   // ============================================================================
 
-  getIdentityKey(): string {
+  getIdentityKey (): string {
     return this.identityKey
   }
 
-  getAddress(): string {
+  getAddress (): string {
     return PublicKey.fromString(this.identityKey).toAddress()
   }
 
-  getStatus(): WalletStatus {
+  getStatus (): WalletStatus {
     return {
       isConnected: true,
       identityKey: this.identityKey,
@@ -55,7 +55,7 @@ export abstract class WalletCore {
     }
   }
 
-  getWalletInfo(): WalletInfo {
+  getWalletInfo (): WalletInfo {
     return {
       identityKey: this.identityKey,
       address: this.getAddress(),
@@ -68,7 +68,7 @@ export abstract class WalletCore {
   // Key Derivation
   // ============================================================================
 
-  async derivePublicKey(
+  async derivePublicKey (
     protocolID: [SecurityLevel, string],
     keyID: string,
     counterparty?: string,
@@ -77,15 +77,15 @@ export abstract class WalletCore {
     const result = await this.getClient().getPublicKey({
       protocolID,
       keyID,
-      counterparty: counterparty || 'anyone',
+      counterparty: counterparty ?? 'anyone',
       forSelf: forSelf ?? false
     })
     return result.publicKey
   }
 
-  async derivePaymentKey(counterparty: string, invoiceNumber?: string): Promise<string> {
+  async derivePaymentKey (counterparty: string, invoiceNumber?: string): Promise<string> {
     const protocolID: [SecurityLevel, string] = [2 as SecurityLevel, '3241645161d8']
-    const keyID = invoiceNumber || Math.random().toString(36).substring(2)
+    const keyID = invoiceNumber ?? Math.random().toString(36).substring(2)
     const result = await this.getClient().getPublicKey({
       protocolID,
       keyID,
@@ -99,16 +99,15 @@ export abstract class WalletCore {
   // Multi-Output Send (core primitive)
   // ============================================================================
 
-  private convertDataElement(element: string | object | number[]): number[] {
+  private convertDataElement (element: string | object | number[]): number[] {
     if (Array.isArray(element)) return element
-    if (typeof element === 'object' && element !== null)
-      return Array.from(Utils.toArray(JSON.stringify(element), 'utf8'))
+    if (typeof element === 'object' && element !== null) { return Array.from(Utils.toArray(JSON.stringify(element), 'utf8')) }
     return Array.from(Utils.toArray(String(element), 'utf8'))
   }
 
-  async send(options: SendOptions): Promise<SendResult> {
+  async send (options: SendOptions): Promise<SendResult> {
     try {
-      if (!options.outputs || options.outputs.length === 0) {
+      if (options.outputs.length === 0) {
         throw new Error('At least one output is required')
       }
 
@@ -118,9 +117,9 @@ export abstract class WalletCore {
 
       for (let i = 0; i < options.outputs.length; i++) {
         const spec = options.outputs[i]
-        const desc = spec.description || this.defaults.outputDescription
+        const desc = spec.description ?? this.defaults.outputDescription
 
-        if (spec.data && !spec.to) {
+        if ((spec.data != null) && (spec.to == null || spec.to === '')) {
           // OP_RETURN: data fields, no recipient
           const script = new Script()
             .writeOpCode(OP.OP_FALSE)
@@ -132,17 +131,16 @@ export abstract class WalletCore {
             lockingScript: script.toHex(),
             satoshis: 0,
             outputDescription: desc,
-            ...(spec.basket ? { basket: spec.basket } : {})
+            ...(spec.basket != null ? { basket: spec.basket } : {})
           })
           outputDetails.push({ index: i, type: 'op_return', satoshis: 0, description: desc })
-
-        } else if (spec.to && spec.data) {
+        } else if ((spec.to != null && spec.to !== '') && (spec.data != null)) {
           // PushDrop: data fields locked to recipient
           const sats = spec.satoshis ?? 1
           if (sats < 1) throw new Error(`PushDrop output #${i} needs satoshis >= 1`)
-          const protocolID = (spec.protocolID || this.defaults.tokenProtocolID) as [SecurityLevel, string]
-          const keyID = spec.keyID || Utils.toBase64(Random(8))
-          const basket = spec.basket || this.defaults.tokenBasket
+          const protocolID = (spec.protocolID != null ? spec.protocolID : this.defaults.tokenProtocolID) as [SecurityLevel, string]
+          const keyID = spec.keyID ?? Utils.toBase64(Random(8))
+          const basket = spec.basket ?? this.defaults.tokenBasket
 
           const fields = spec.data.map(el => this.convertDataElement(el))
           const pushdrop = new PushDrop(client)
@@ -164,8 +162,7 @@ export abstract class WalletCore {
             tags: ['token']
           })
           outputDetails.push({ index: i, type: 'pushdrop', satoshis: sats, description: desc })
-
-        } else if (spec.to && !spec.data) {
+        } else if ((spec.to != null && spec.to !== '') && (spec.data == null)) {
           // P2PKH: simple payment
           const sats = spec.satoshis ?? 0
           if (sats <= 0) throw new Error(`P2PKH output #${i} needs satoshis > 0`)
@@ -178,25 +175,24 @@ export abstract class WalletCore {
             lockingScript,
             satoshis: sats,
             outputDescription: desc,
-            ...(spec.basket ? { basket: spec.basket } : {})
+            ...(spec.basket != null ? { basket: spec.basket } : {})
           })
           outputDetails.push({ index: i, type: 'p2pkh', satoshis: sats, description: desc })
-
         } else {
           throw new Error(`Output #${i}: must have 'to' (P2PKH), 'data' (OP_RETURN), or both (PushDrop)`)
         }
       }
 
       const result = await client.createAction({
-        description: options.description || this.defaults.description,
+        description: options.description ?? this.defaults.description,
         outputs: actionOutputs,
         options: { randomizeOutputs: false }
       })
 
       let reinternalized: ReinternalizeResult | undefined
       const changeBasket = options.changeBasket ?? this.defaults.changeBasket
-      if (changeBasket) {
-        if (result.tx) {
+      if (changeBasket != null) {
+        if (result.tx != null) {
           const skipIndexes = actionOutputs.map((_: any, i: number) => i)
           reinternalized = await this.reinternalizeChange(result.tx as number[], changeBasket, skipIndexes)
         } else {
@@ -205,7 +201,7 @@ export abstract class WalletCore {
       }
 
       return {
-        txid: result.txid || '',
+        txid: result.txid ?? '',
         tx: result.tx,
         reinternalized,
         outputDetails
@@ -219,16 +215,16 @@ export abstract class WalletCore {
   // Pay (convenience wrapper around send)
   // ============================================================================
 
-  async pay(options: PaymentOptions): Promise<TransactionResult> {
+  async pay (options: PaymentOptions): Promise<TransactionResult> {
     try {
       const client = this.getClient()
       const outputs: any[] = []
 
       let recipientKey = options.to
-      if (options.derivationPrefix || options.derivationSuffix) {
-        const invoiceNumber = options.derivationPrefix && options.derivationSuffix
+      if ((options.derivationPrefix != null) || (options.derivationSuffix != null)) {
+        const invoiceNumber = (options.derivationPrefix != null && options.derivationSuffix != null)
           ? `${options.derivationPrefix}-${options.derivationSuffix}`
-          : options.derivationPrefix || options.derivationSuffix || undefined
+          : (options.derivationPrefix ?? options.derivationSuffix ?? undefined)
         recipientKey = await this.derivePaymentKey(options.to, invoiceNumber)
       }
 
@@ -240,10 +236,10 @@ export abstract class WalletCore {
         lockingScript,
         satoshis: options.satoshis,
         outputDescription: this.defaults.outputDescription,
-        ...(options.basket ? { basket: options.basket } : {})
+        ...(options.basket != null ? { basket: options.basket } : {})
       })
 
-      if (options.memo) {
+      if (options.memo != null) {
         const memoScript = new Script()
           .writeOpCode(OP.OP_FALSE)
           .writeOpCode(OP.OP_RETURN)
@@ -256,15 +252,15 @@ export abstract class WalletCore {
       }
 
       const result = await client.createAction({
-        description: options.description || this.defaults.description,
+        description: options.description ?? this.defaults.description,
         outputs,
         options: { randomizeOutputs: false }
       })
 
       let reinternalized: ReinternalizeResult | undefined
       const changeBasket = options.changeBasket ?? this.defaults.changeBasket
-      if (changeBasket) {
-        if (result.tx) {
+      if (changeBasket != null) {
+        if (result.tx != null) {
           const skipIndexes = outputs.map((_: any, i: number) => i)
           reinternalized = await this.reinternalizeChange(result.tx as number[], changeBasket, skipIndexes)
         } else {
@@ -273,7 +269,7 @@ export abstract class WalletCore {
       }
 
       return {
-        txid: result.txid || '',
+        txid: result.txid ?? '',
         tx: result.tx,
         reinternalized,
         outputs: outputs.map((out, index) => ({
@@ -291,7 +287,7 @@ export abstract class WalletCore {
   // Fund Server Wallet
   // ============================================================================
 
-  async fundServerWallet(request: PaymentRequest, basket?: string, changeBasket?: string): Promise<TransactionResult> {
+  async fundServerWallet (request: PaymentRequest, basket?: string, changeBasket?: string): Promise<TransactionResult> {
     try {
       const client = this.getClient()
       const protocolID: [SecurityLevel, string] = [2 as SecurityLevel, '3241645161d8']
@@ -312,10 +308,10 @@ export abstract class WalletCore {
         lockingScript,
         satoshis: request.satoshis,
         outputDescription: `Server wallet funding: ${request.satoshis} sats`,
-        ...(basket ? { basket } : {})
+        ...(basket != null ? { basket } : {})
       }]
 
-      if (request.memo) {
+      if (request.memo != null) {
         const memoScript = new Script()
           .writeOpCode(OP.OP_FALSE)
           .writeOpCode(OP.OP_RETURN)
@@ -328,15 +324,15 @@ export abstract class WalletCore {
       }
 
       const result = await client.createAction({
-        description: request.memo || `Fund server wallet (${request.satoshis} sats)`,
+        description: request.memo ?? `Fund server wallet (${request.satoshis} sats)`,
         outputs,
         options: { randomizeOutputs: false }
       })
 
       let reinternalized: ReinternalizeResult | undefined
       const effectiveChangeBasket = changeBasket ?? this.defaults.changeBasket
-      if (effectiveChangeBasket) {
-        if (result.tx) {
+      if (effectiveChangeBasket != null) {
+        if (result.tx != null) {
           const skipIndexes = outputs.map((_: any, i: number) => i)
           reinternalized = await this.reinternalizeChange(result.tx as number[], effectiveChangeBasket, skipIndexes)
         } else {
@@ -345,7 +341,7 @@ export abstract class WalletCore {
       }
 
       return {
-        txid: result.txid || '',
+        txid: result.txid ?? '',
         tx: result.tx,
         reinternalized,
         outputs: outputs.map((out, index) => ({
@@ -363,17 +359,17 @@ export abstract class WalletCore {
   // Change Output Re-internalization
   // ============================================================================
 
-  async reinternalizeChange(
+  async reinternalizeChange (
     tx: number[],
     basket: string,
     skipOutputIndexes: number[] = [0]
   ): Promise<ReinternalizeResult> {
-    if (!tx || tx.length === 0) {
+    if (tx.length === 0) {
       return { count: 0, errors: ['No tx bytes available for reinternalization'] }
     }
 
-    interface ChangeOutput { index: number; satoshis: number }
-    let changeOutputs: ChangeOutput[] = []
+    interface ChangeOutput { index: number, satoshis: number }
+    const changeOutputs: ChangeOutput[] = []
 
     try {
       const transaction = Transaction.fromAtomicBEEF(tx)
@@ -433,18 +429,18 @@ export abstract class WalletCore {
         broadcastReady = true
         break
       } catch (error) {
-        const msg = (error as Error).message || String(error)
+        const msg = (error as Error).message !== '' ? (error as Error).message : String(error)
         if (!msg.includes('sending')) {
           probeError = msg
           break
         }
-        await new Promise(r => setTimeout(r, delay))
+        await new Promise<void>(resolve => setTimeout(resolve, delay))
         delay = Math.min(delay * 2, 16000)
       }
     }
 
     if (!broadcastReady) {
-      const reason = probeError || 'Transaction broadcast did not complete within 30s timeout'
+      const reason = probeError !== '' ? probeError : 'Transaction broadcast did not complete within 30s timeout'
       return { count: 0, errors: [reason] }
     }
 
@@ -470,7 +466,7 @@ export abstract class WalletCore {
         } as any)
         count++
       } catch (error) {
-        const msg = (error as Error).message || String(error)
+        const msg = (error as Error).message !== '' ? (error as Error).message : String(error)
         errors.push(`output #${idx}: ${msg}`)
       }
     }

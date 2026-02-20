@@ -10,9 +10,9 @@ export const DEFAULT_CONFIG: WalletDefaults = {
   tokenProtocolID: [0 as SecurityLevel, 'token'],
   tokenKeyID: '1',
   messageBoxHost: 'https://messagebox.babbage.systems',
-  registryUrl: undefined,
+  registryUrl: undefined
 }
 
-export function mergeDefaults(partial: Partial<WalletDefaults>): WalletDefaults {
+export function mergeDefaults (partial: Partial<WalletDefaults>): WalletDefaults {
   return { ...DEFAULT_CONFIG, ...partial }
 }
