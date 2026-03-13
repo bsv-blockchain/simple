@@ -18,9 +18,61 @@ import {
   TransactionResult
 } from '../core/types'
 
+// New token standard types & adapters
+import {
+  TokenStandard,
+  MintTokenOptions,
+  MintPushDropOptions,
+  MintOrdinalOptions,
+  MintBsv21Options,
+  MintBsv20Options,
+  MintTokenResult,
+  UnifiedTokenInfo,
+  ListTokensOptions,
+  TransferTokenOptions,
+  BurnTokenOptions,
+  InscribeOrdinalOptions,
+  DeployBsv21Options,
+  TransferBsv21Options,
+  DeployBsv20Options,
+  MintBsv20TickerOptions,
+  TransferBsv20Options
+} from './tokens/types'
+import { PushDropAdapter } from './tokens/pushdrop-adapter'
+import { OrdinalAdapter } from './tokens/ordinal-adapter'
+import { Bsv21Adapter } from './tokens/bsv21-adapter'
+import { Bsv20Adapter } from './tokens/bsv20-adapter'
+import { detectStandard } from './tokens/detection'
+
 const TOKEN_MESSAGE_BOX = 'simple_token_inbox'
 
+// Singleton adapter instances
+const pushDropAdapter = new PushDropAdapter()
+const ordinalAdapter = new OrdinalAdapter()
+const bsv21Adapter = new Bsv21Adapter()
+const bsv20Adapter = new Bsv20Adapter()
+
+function getAdapter (standard: TokenStandard) {
+  switch (standard) {
+    case 'pushdrop': return pushDropAdapter
+    case 'ordinal': return ordinalAdapter
+    case 'bsv-21': return bsv21Adapter
+    case 'bsv-20': return bsv20Adapter
+    default: throw new Error(`Unknown token standard: ${standard as string}`)
+  }
+}
+
+function getDefaultBasket (core: WalletCore, standard: TokenStandard): string {
+  switch (standard) {
+    case 'pushdrop': return core.defaults.tokenBasket
+    case 'ordinal': return core.defaults.ordinalBasket
+    case 'bsv-21': return core.defaults.bsv21Basket
+    case 'bsv-20': return core.defaults.bsv20Basket
+  }
+}
+
 export function createTokenMethods (core: WalletCore): {
+  // === Backward-compatible PushDrop methods ===
   createToken: (options: TokenOptions) => Promise<TokenResult>
   listTokenDetails: (basket?: string) => Promise<TokenDetail[]>
   sendToken: (options: SendTokenOptions) => Promise<TransactionResult>
@@ -28,8 +80,24 @@ export function createTokenMethods (core: WalletCore): {
   sendTokenViaMessageBox: (options: SendTokenOptions) => Promise<TransactionResult>
   listIncomingTokens: () => Promise<any[]>
   acceptIncomingToken: (token: any, basket?: string) => Promise<any>
+  // === New unified methods ===
+  mintToken: (options: MintTokenOptions) => Promise<MintTokenResult>
+  listTokens: (options?: ListTokensOptions) => Promise<UnifiedTokenInfo[]>
+  transferToken: (options: TransferTokenOptions) => Promise<TransactionResult>
+  burnToken: (options: BurnTokenOptions) => Promise<TransactionResult>
+  // === Standard-specific convenience methods ===
+  inscribeOrdinal: (options: InscribeOrdinalOptions) => Promise<MintTokenResult>
+  deployBsv21: (options: DeployBsv21Options) => Promise<MintTokenResult>
+  transferBsv21: (options: TransferBsv21Options) => Promise<MintTokenResult>
+  deployBsv20: (options: DeployBsv20Options) => Promise<MintTokenResult>
+  mintBsv20: (options: MintBsv20TickerOptions) => Promise<MintTokenResult>
+  transferBsv20: (options: TransferBsv20Options) => Promise<MintTokenResult>
 } {
   return {
+    // ========================================================================
+    // Backward-compatible PushDrop methods (unchanged signatures)
+    // ========================================================================
+
     async createToken (options: TokenOptions): Promise<TokenResult> {
       try {
         const client = core.getClient()
@@ -514,6 +582,128 @@ export function createTokenMethods (core: WalletCore): {
         return { accepted: true, basket: effectiveBasket, sender: token.sender }
       } catch (error) {
         throw new Error(`Failed to accept incoming token: ${(error as Error).message}`)
+      }
+    },
+
+    // ========================================================================
+    // New Unified Methods
+    // ========================================================================
+
+    async mintToken (options: MintTokenOptions): Promise<MintTokenResult> {
+      const standard = options.standard ?? 'pushdrop'
+      const adapter = getAdapter(standard)
+      try {
+        return await adapter.create(core, options as any)
+      } catch (error) {
+        throw new Error(`Token mint failed (${standard}): ${(error as Error).message}`)
+      }
+    },
+
+    async listTokens (options?: ListTokensOptions): Promise<UnifiedTokenInfo[]> {
+      const basket = options?.basket
+      const standard = options?.standard
+
+      try {
+        if (standard != null) {
+          const adapter = getAdapter(standard)
+          const effectiveBasket = basket ?? getDefaultBasket(core, standard)
+          return await adapter.list(core, effectiveBasket)
+        }
+
+        // If no standard specified, list from the specified basket or all default baskets
+        if (basket != null) {
+          // List from specified basket, try all adapters and merge
+          const results = await Promise.all([
+            pushDropAdapter.list(core, basket).catch(() => []),
+            ordinalAdapter.list(core, basket).catch(() => []),
+            bsv21Adapter.list(core, basket).catch(() => []),
+            bsv20Adapter.list(core, basket).catch(() => [])
+          ])
+          return results.flat()
+        }
+
+        // List from all default baskets
+        const results = await Promise.all([
+          pushDropAdapter.list(core, core.defaults.tokenBasket).catch(() => []),
+          ordinalAdapter.list(core, core.defaults.ordinalBasket).catch(() => []),
+          bsv21Adapter.list(core, core.defaults.bsv21Basket).catch(() => []),
+          bsv20Adapter.list(core, core.defaults.bsv20Basket).catch(() => [])
+        ])
+        return results.flat()
+      } catch (error) {
+        throw new Error(`Failed to list tokens: ${(error as Error).message}`)
+      }
+    },
+
+    async transferToken (options: TransferTokenOptions): Promise<TransactionResult> {
+      const standard = options.standard ?? 'pushdrop'
+      const adapter = getAdapter(standard)
+      try {
+        return await adapter.send(core, options)
+      } catch (error) {
+        throw new Error(`Token transfer failed (${standard}): ${(error as Error).message}`)
+      }
+    },
+
+    async burnToken (options: BurnTokenOptions): Promise<TransactionResult> {
+      const standard = options.standard ?? 'pushdrop'
+      const adapter = getAdapter(standard)
+      try {
+        return await adapter.redeem(core, options)
+      } catch (error) {
+        throw new Error(`Token burn failed (${standard}): ${(error as Error).message}`)
+      }
+    },
+
+    // ========================================================================
+    // Standard-Specific Convenience Methods
+    // ========================================================================
+
+    async inscribeOrdinal (options: InscribeOrdinalOptions): Promise<MintTokenResult> {
+      try {
+        return await ordinalAdapter.create(core, options)
+      } catch (error) {
+        throw new Error(`Ordinal inscription failed: ${(error as Error).message}`)
+      }
+    },
+
+    async deployBsv21 (options: DeployBsv21Options): Promise<MintTokenResult> {
+      try {
+        return await bsv21Adapter.create(core, options)
+      } catch (error) {
+        throw new Error(`BSV-21 deploy failed: ${(error as Error).message}`)
+      }
+    },
+
+    async transferBsv21 (options: TransferBsv21Options): Promise<MintTokenResult> {
+      try {
+        return await bsv21Adapter.create(core, options)
+      } catch (error) {
+        throw new Error(`BSV-21 transfer failed: ${(error as Error).message}`)
+      }
+    },
+
+    async deployBsv20 (options: DeployBsv20Options): Promise<MintTokenResult> {
+      try {
+        return await bsv20Adapter.create(core, options)
+      } catch (error) {
+        throw new Error(`BSV-20 deploy failed: ${(error as Error).message}`)
+      }
+    },
+
+    async mintBsv20 (options: MintBsv20TickerOptions): Promise<MintTokenResult> {
+      try {
+        return await bsv20Adapter.create(core, options)
+      } catch (error) {
+        throw new Error(`BSV-20 mint failed: ${(error as Error).message}`)
+      }
+    },
+
+    async transferBsv20 (options: TransferBsv20Options): Promise<MintTokenResult> {
+      try {
+        return await bsv20Adapter.create(core, options)
+      } catch (error) {
+        throw new Error(`BSV-20 transfer failed: ${(error as Error).message}`)
       }
     }
   }

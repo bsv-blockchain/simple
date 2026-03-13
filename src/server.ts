@@ -27,6 +27,7 @@ import { createCertificationMethods } from './modules/certification'
 import { createOverlayMethods } from './modules/overlay'
 import { createDIDMethods } from './modules/did'
 import { createCredentialMethods } from './modules/credentials'
+import { createMarketplaceMethods } from './modules/marketplace'
 
 // Re-export everything from the browser entry
 export * from './browser'
@@ -191,6 +192,7 @@ export type ServerWallet = _ServerWallet
   & ReturnType<typeof createOverlayMethods>
   & ReturnType<typeof createDIDMethods>
   & ReturnType<typeof createCredentialMethods>
+  & ReturnType<typeof createMarketplaceMethods>
 
 // ============================================================================
 // Static factory on the ServerWallet namespace
@@ -222,6 +224,7 @@ export namespace ServerWallet {
     Object.assign(wallet, createOverlayMethods(wallet))
     Object.assign(wallet, createDIDMethods(wallet))
     Object.assign(wallet, createCredentialMethods(wallet))
+    Object.assign(wallet, createMarketplaceMethods(wallet))
 
     return wallet as ServerWallet
   }

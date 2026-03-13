@@ -8,6 +8,7 @@ import { createCertificationMethods } from './modules/certification'
 import { createOverlayMethods } from './modules/overlay'
 import { createDIDMethods } from './modules/did'
 import { createCredentialMethods } from './modules/credentials'
+import { createMarketplaceMethods } from './modules/marketplace'
 
 // ============================================================================
 // BrowserWallet extends WalletCore with WalletClient
@@ -38,6 +39,7 @@ export type BrowserWallet = _BrowserWallet
   & ReturnType<typeof createOverlayMethods>
   & ReturnType<typeof createDIDMethods>
   & ReturnType<typeof createCredentialMethods>
+  & ReturnType<typeof createMarketplaceMethods>
 
 // ============================================================================
 // Factory function
@@ -55,6 +57,7 @@ export async function createWallet(defaults?: Partial<WalletDefaults>): Promise<
   Object.assign(wallet, createOverlayMethods(wallet))
   Object.assign(wallet, createDIDMethods(wallet))
   Object.assign(wallet, createCredentialMethods(wallet))
+  Object.assign(wallet, createMarketplaceMethods(wallet))
 
   return wallet as BrowserWallet
 }
