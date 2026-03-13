@@ -46,3 +46,10 @@ export class CredentialError extends SimpleError {
     this.name = 'CredentialError'
   }
 }
+
+export class TokenError extends SimpleError {
+  constructor (message: string) {
+    super(message, 'TOKEN_ERROR')
+    this.name = 'TokenError'
+  }
+}

@@ -17,6 +17,9 @@ export interface WalletDefaults {
   tokenBasket: string
   tokenProtocolID: [SecurityLevel, string]
   tokenKeyID: string
+  ordinalBasket: string
+  bsv21Basket: string
+  bsv20Basket: string
   messageBoxHost: string
   registryUrl?: string
   didBasket: string
