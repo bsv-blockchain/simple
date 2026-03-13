@@ -1,0 +1,18 @@
+{
+  "name": "simple-web-tests",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@bsv/simple": "file:.."
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vite": "^5.4.0"
+  }
+}

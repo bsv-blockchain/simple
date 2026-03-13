@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>@bsv/simple - Token Standards Test Suite</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --blue: #58a6ff;
+      --purple: #bc8cff;
+      --orange: #f0883e;
+      --cyan: #39d353;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--blue);
+    }
+
+    header h1 span { color: var(--muted); font-weight: 400; }
+
+    #wallet-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    #wallet-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+    }
+
+    #wallet-status.connected .dot { background: var(--green); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr 380px;
+      height: calc(100vh - 53px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 12px 0;
+    }
+
+    .sidebar h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 8px 16px 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .sidebar button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .sidebar button:hover {
+      background: rgba(88, 166, 255, 0.08);
+      color: var(--blue);
+    }
+
+    .sidebar button.active {
+      border-left-color: var(--blue);
+      background: rgba(88, 166, 255, 0.1);
+      color: var(--blue);
+    }
+
+    .sidebar button .badge {
+      float: right;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: var(--border);
+      color: var(--muted);
+    }
+
+    .sidebar button .badge.pass { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+    .sidebar button .badge.fail { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+    .sidebar button .badge.running { background: rgba(210, 153, 34, 0.2); color: var(--yellow); }
+
+    /* Main area */
+    .main {
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .test-panel {
+      display: none;
+    }
+
+    .test-panel.active {
+      display: block;
+    }
+
+    .test-panel h2 {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .test-panel .description {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .action-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn:hover { border-color: var(--blue); color: var(--blue); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: rgba(88, 166, 255, 0.15);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .btn-primary:hover { background: rgba(88, 166, 255, 0.25); }
+
+    .btn-danger {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .btn-success {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* Result card */
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .result-card .card-header {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .result-card .card-header .status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .result-card .card-header .status.pass { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+    .result-card .card-header .status.fail { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+    .result-card .card-header .status.running { background: rgba(210, 153, 34, 0.2); color: var(--yellow); }
+
+    .result-card .card-body {
+      padding: 12px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .result-card pre {
+      background: var(--bg);
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 11px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .result-card .timing {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    /* Event log */
+    .event-log {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .event-log-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 10;
+    }
+
+    .event-log-header h3 {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .event-log-header button {
+      font-size: 11px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .event-log-header button:hover { color: var(--text); }
+
+    #log-entries {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .log-entry {
+      padding: 6px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      margin-bottom: 2px;
+      line-height: 1.5;
+      border-left: 2px solid transparent;
+    }
+
+    .log-entry .timestamp {
+      color: var(--muted);
+      margin-right: 6px;
+    }
+
+    .log-entry.info { border-left-color: var(--blue); }
+    .log-entry.success { border-left-color: var(--green); }
+    .log-entry.error { border-left-color: var(--red); }
+    .log-entry.warn { border-left-color: var(--yellow); }
+    .log-entry.tx { border-left-color: var(--purple); }
+
+    .log-entry .detail {
+      color: var(--muted);
+      display: block;
+      margin-top: 2px;
+      word-break: break-all;
+    }
+
+    /* Stats bar */
+    #stats-bar {
+      padding: 8px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      gap: 16px;
+      background: var(--surface);
+    }
+
+    #stats-bar .stat-value { color: var(--text); font-weight: 600; }
+    #stats-bar .stat-pass { color: var(--green); }
+    #stats-bar .stat-fail { color: var(--red); }
+
+    /* Run All bar */
+    #run-all-bar {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    #run-all-bar .progress {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    #run-all-bar .progress-fill {
+      height: 100%;
+      background: var(--blue);
+      border-radius: 2px;
+      transition: width 0.3s;
+      width: 0%;
+    }
+
+    /* Form inputs */
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>@bsv/simple <span>Token Standards Test Suite</span></h1>
+    <div id="wallet-status">
+      <div class="dot"></div>
+      <span id="wallet-status-text">Disconnected</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div id="run-all-bar">
+        <button class="btn btn-primary" id="btn-connect" style="width:100%">Connect Wallet</button>
+        <button class="btn btn-success" id="btn-run-all" style="width:100%;margin-top:8px;display:none">Run All Tests</button>
+        <div class="progress" style="display:none"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+
+      <h3>Wallet</h3>
+      <button data-panel="wallet-info">Wallet Info</button>
+
+      <h3>PushDrop Tokens</h3>
+      <button data-panel="pushdrop-create">Create Token</button>
+      <button data-panel="pushdrop-list">List Tokens</button>
+      <button data-panel="pushdrop-send">Send Token</button>
+      <button data-panel="pushdrop-redeem">Redeem Token</button>
+
+      <h3>1Sat Ordinals (NFT)</h3>
+      <button data-panel="ordinal-inscribe">Inscribe Ordinal</button>
+      <button data-panel="ordinal-list">List Ordinals</button>
+      <button data-panel="ordinal-transfer">Transfer Ordinal</button>
+      <button data-panel="ordinal-burn">Burn Ordinal</button>
+
+      <h3>BSV-21 (Fungible)</h3>
+      <button data-panel="bsv21-deploy">Deploy + Mint</button>
+      <button data-panel="bsv21-list">List BSV-21</button>
+      <button data-panel="bsv21-transfer">Transfer BSV-21</button>
+      <button data-panel="bsv21-burn">Burn BSV-21</button>
+
+      <h3>BSV-20 (Ticker)</h3>
+      <button data-panel="bsv20-deploy">Deploy Ticker</button>
+      <button data-panel="bsv20-mint">Mint Ticker</button>
+      <button data-panel="bsv20-list">List BSV-20</button>
+      <button data-panel="bsv20-transfer">Transfer BSV-20</button>
+      <button data-panel="bsv20-burn">Burn BSV-20</button>
+
+      <h3>Marketplace (OrdLock)</h3>
+      <button data-panel="market-list-sale">List For Sale</button>
+      <button data-panel="market-purchase">Purchase</button>
+      <button data-panel="market-cancel">Cancel Listing</button>
+
+      <h3>Unified API</h3>
+      <button data-panel="unified-mint">mintToken()</button>
+      <button data-panel="unified-list">listTokens()</button>
+      <button data-panel="unified-transfer">transferToken()</button>
+      <button data-panel="unified-burn">burnToken()</button>
+    </nav>
+
+    <!-- Main -->
+    <main class="main" id="main-content">
+      <!-- Wallet Info -->
+      <div class="test-panel active" id="panel-wallet-info">
+        <h2>Wallet Info</h2>
+        <p class="description">Connect your wallet and view status, identity key, and address.</p>
+        <div class="action-bar">
+          <button class="btn btn-primary" id="btn-get-info" disabled>Get Wallet Info</button>
+        </div>
+        <div id="result-wallet-info"></div>
+      </div>
+
+      <!-- PushDrop Create -->
+      <div class="test-panel" id="panel-pushdrop-create">
+        <h2>PushDrop: Create Token</h2>
+        <p class="description">Create an encrypted PushDrop token with custom data.</p>
+        <div class="form-group">
+          <label>Token Data (JSON)</label>
+          <textarea id="pd-create-data" rows="3">{"type": "loyalty", "points": 100, "tier": "gold"}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Basket</label>
+          <input id="pd-create-basket" value="test-tokens" />
+        </div>
+        <div class="form-group">
+          <label>Satoshis</label>
+          <input id="pd-create-sats" type="number" value="1" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="pushdrop-create" disabled>Create Token</button>
+        </div>
+        <div id="result-pushdrop-create"></div>
+      </div>
+
+      <!-- PushDrop List -->
+      <div class="test-panel" id="panel-pushdrop-list">
+        <h2>PushDrop: List Tokens</h2>
+        <p class="description">List and decrypt PushDrop tokens from a basket.</p>
+        <div class="form-group">
+          <label>Basket</label>
+          <input id="pd-list-basket" value="test-tokens" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="pushdrop-list" disabled>List Tokens</button>
+        </div>
+        <div id="result-pushdrop-list"></div>
+      </div>
+
+      <!-- PushDrop Send -->
+      <div class="test-panel" id="panel-pushdrop-send">
+        <h2>PushDrop: Send Token</h2>
+        <p class="description">Transfer a PushDrop token to another identity key (self-send for testing).</p>
+        <div class="form-group">
+          <label>Basket</label>
+          <input id="pd-send-basket" value="test-tokens" />
+        </div>
+        <div class="form-group">
+          <label>Outpoint (txid.vout)</label>
+          <input id="pd-send-outpoint" placeholder="Will auto-fill from list" />
+        </div>
+        <div class="form-group">
+          <label>Recipient Key (leave empty for self-send)</label>
+          <input id="pd-send-to" placeholder="02..." />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="pushdrop-send" disabled>Send Token</button>
+        </div>
+        <div id="result-pushdrop-send"></div>
+      </div>
+
+      <!-- PushDrop Redeem -->
+      <div class="test-panel" id="panel-pushdrop-redeem">
+        <h2>PushDrop: Redeem Token</h2>
+        <p class="description">Destroy/spend a PushDrop token.</p>
+        <div class="form-group">
+          <label>Basket</label>
+          <input id="pd-redeem-basket" value="test-tokens" />
+        </div>
+        <div class="form-group">
+          <label>Outpoint</label>
+          <input id="pd-redeem-outpoint" placeholder="Will auto-fill from list" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-danger" data-test="pushdrop-redeem" disabled>Redeem Token</button>
+        </div>
+        <div id="result-pushdrop-redeem"></div>
+      </div>
+
+      <!-- Ordinal Inscribe -->
+      <div class="test-panel" id="panel-ordinal-inscribe">
+        <h2>Ordinal: Inscribe</h2>
+        <p class="description">Create a 1Sat Ordinal NFT inscription with content and optional MAP metadata.</p>
+        <div class="form-group">
+          <label>Content</label>
+          <textarea id="ord-inscribe-content" rows="3">Hello from @bsv/simple token test!</textarea>
+        </div>
+        <div class="form-group">
+          <label>Content Type</label>
+          <input id="ord-inscribe-type" value="text/plain" />
+        </div>
+        <div class="form-group">
+          <label>MAP Metadata (JSON, optional)</label>
+          <textarea id="ord-inscribe-meta" rows="2">{"app": "simple-test", "type": "test-inscription"}</textarea>
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="ordinal-inscribe" disabled>Inscribe Ordinal</button>
+        </div>
+        <div id="result-ordinal-inscribe"></div>
+      </div>
+
+      <!-- Ordinal List -->
+      <div class="test-panel" id="panel-ordinal-list">
+        <h2>Ordinal: List</h2>
+        <p class="description">List all 1Sat Ordinals in the ordinals basket.</p>
+        <div class="form-group">
+          <label>Basket</label>
+          <input id="ord-list-basket" value="ordinals" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="ordinal-list" disabled>List Ordinals</button>
+        </div>
+        <div id="result-ordinal-list"></div>
+      </div>
+
+      <!-- Ordinal Transfer -->
+      <div class="test-panel" id="panel-ordinal-transfer">
+        <h2>Ordinal: Transfer</h2>
+        <p class="description">Transfer an ordinal to another identity key.</p>
+        <div class="form-group">
+          <label>Outpoint</label>
+          <input id="ord-transfer-outpoint" placeholder="From list" />
+        </div>
+        <div class="form-group">
+          <label>Recipient Key (empty = self)</label>
+          <input id="ord-transfer-to" placeholder="02..." />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="ordinal-transfer" disabled>Transfer Ordinal</button>
+        </div>
+        <div id="result-ordinal-transfer"></div>
+      </div>
+
+      <!-- Ordinal Burn -->
+      <div class="test-panel" id="panel-ordinal-burn">
+        <h2>Ordinal: Burn</h2>
+        <p class="description">Destroy an ordinal inscription.</p>
+        <div class="form-group">
+          <label>Outpoint</label>
+          <input id="ord-burn-outpoint" placeholder="From list" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-danger" data-test="ordinal-burn" disabled>Burn Ordinal</button>
+        </div>
+        <div id="result-ordinal-burn"></div>
+      </div>
+
+      <!-- BSV-21 Deploy -->
+      <div class="test-panel" id="panel-bsv21-deploy">
+        <h2>BSV-21: Deploy + Mint</h2>
+        <p class="description">Atomic deploy+mint of a BSV-21 fungible token.</p>
+        <div class="form-group">
+          <label>Symbol</label>
+          <input id="b21-deploy-symbol" value="SIMPLE" />
+        </div>
+        <div class="form-group">
+          <label>Amount</label>
+          <input id="b21-deploy-amount" type="number" value="1000000" />
+        </div>
+        <div class="form-group">
+          <label>Decimals</label>
+          <input id="b21-deploy-decimals" type="number" value="8" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="bsv21-deploy" disabled>Deploy + Mint</button>
+        </div>
+        <div id="result-bsv21-deploy"></div>
+      </div>
+
+      <!-- BSV-21 List -->
+      <div class="test-panel" id="panel-bsv21-list">
+        <h2>BSV-21: List Tokens</h2>
+        <p class="description">List all BSV-21 tokens.</p>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="bsv21-list" disabled>List BSV-21</button>
+        </div>
+        <div id="result-bsv21-list"></div>
+      </div>
+
+      <!-- BSV-21 Transfer -->
+      <div class="test-panel" id="panel-bsv21-transfer">
+        <h2>BSV-21: Transfer</h2>
+        <p class="description">Transfer BSV-21 tokens to a recipient.</p>
+        <div class="form-group">
+          <label>Token ID</label>
+          <input id="b21-transfer-tokenid" placeholder="From deploy result" />
+        </div>
+        <div class="form-group">
+          <label>Recipient Key (empty = self)</label>
+          <input id="b21-transfer-to" placeholder="02..." />
+        </div>
+        <div class="form-group">
+          <label>Amount</label>
+          <input id="b21-transfer-amount" type="number" value="500" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="bsv21-transfer" disabled>Transfer BSV-21</button>
+        </div>
+        <div id="result-bsv21-transfer"></div>
+      </div>
+
+      <!-- BSV-21 Burn -->
+      <div class="test-panel" id="panel-bsv21-burn">
+        <h2>BSV-21: Burn</h2>
+        <p class="description">Burn/destroy a BSV-21 token output.</p>
+        <div class="form-group">
+          <label>Outpoint</label>
+          <input id="b21-burn-outpoint" placeholder="From list" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-danger" data-test="bsv21-burn" disabled>Burn BSV-21</button>
+        </div>
+        <div id="result-bsv21-burn"></div>
+      </div>
+
+      <!-- BSV-20 Deploy -->
+      <div class="test-panel" id="panel-bsv20-deploy">
+        <h2>BSV-20: Deploy Ticker</h2>
+        <p class="description">Deploy a new BSV-20 v1 ticker-based token.</p>
+        <div class="form-group">
+          <label>Ticker</label>
+          <input id="b20-deploy-ticker" value="PEPE" />
+        </div>
+        <div class="form-group">
+          <label>Max Supply</label>
+          <input id="b20-deploy-max" type="number" value="21000000" />
+        </div>
+        <div class="form-group">
+          <label>Mint Limit (per tx)</label>
+          <input id="b20-deploy-limit" type="number" value="1000" />
+        </div>
+        <div class="form-group">
+          <label>Decimals</label>
+          <input id="b20-deploy-decimals" type="number" value="0" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="bsv20-deploy" disabled>Deploy Ticker</button>
+        </div>
+        <div id="result-bsv20-deploy"></div>
+      </div>
+
+      <!-- BSV-20 Mint -->
+      <div class="test-panel" id="panel-bsv20-mint">
+        <h2>BSV-20: Mint</h2>
+        <p class="description">Mint tokens of an existing BSV-20 ticker.</p>
+        <div class="form-group">
+          <label>Ticker</label>
+          <input id="b20-mint-ticker" value="PEPE" />
+        </div>
+        <div class="form-group">
+          <label>Amount</label>
+          <input id="b20-mint-amount" type="number" value="1000" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="bsv20-mint" disabled>Mint Tokens</button>
+        </div>
+        <div id="result-bsv20-mint"></div>
+      </div>
+
+      <!-- BSV-20 List -->
+      <div class="test-panel" id="panel-bsv20-list">
+        <h2>BSV-20: List Tokens</h2>
+        <p class="description">List all BSV-20 tokens.</p>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="bsv20-list" disabled>List BSV-20</button>
+        </div>
+        <div id="result-bsv20-list"></div>
+      </div>
+
+      <!-- BSV-20 Transfer -->
+      <div class="test-panel" id="panel-bsv20-transfer">
+        <h2>BSV-20: Transfer</h2>
+        <p class="description">Transfer BSV-20 tokens to a recipient.</p>
+        <div class="form-group">
+          <label>Ticker</label>
+          <input id="b20-transfer-ticker" value="PEPE" />
+        </div>
+        <div class="form-group">
+          <label>Token ID (deploy outpoint)</label>
+          <input id="b20-transfer-tokenid" placeholder="From deploy" />
+        </div>
+        <div class="form-group">
+          <label>Recipient Key (empty = self)</label>
+          <input id="b20-transfer-to" placeholder="02..." />
+        </div>
+        <div class="form-group">
+          <label>Amount</label>
+          <input id="b20-transfer-amount" type="number" value="100" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="bsv20-transfer" disabled>Transfer BSV-20</button>
+        </div>
+        <div id="result-bsv20-transfer"></div>
+      </div>
+
+      <!-- BSV-20 Burn -->
+      <div class="test-panel" id="panel-bsv20-burn">
+        <h2>BSV-20: Burn</h2>
+        <p class="description">Burn/destroy a BSV-20 token output.</p>
+        <div class="form-group">
+          <label>Outpoint</label>
+          <input id="b20-burn-outpoint" placeholder="From list" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-danger" data-test="bsv20-burn" disabled>Burn BSV-20</button>
+        </div>
+        <div id="result-bsv20-burn"></div>
+      </div>
+
+      <!-- Marketplace List For Sale -->
+      <div class="test-panel" id="panel-market-list-sale">
+        <h2>Marketplace: List For Sale</h2>
+        <p class="description">List an ordinal for sale using OrdLock smart contract.</p>
+        <div class="form-group">
+          <label>Source Basket</label>
+          <input id="mkt-list-basket" value="ordinals" />
+        </div>
+        <div class="form-group">
+          <label>Ordinal Outpoint</label>
+          <input id="mkt-list-outpoint" placeholder="From ordinal list" />
+        </div>
+        <div class="form-group">
+          <label>Price (satoshis)</label>
+          <input id="mkt-list-price" type="number" value="10000" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="market-list-sale" disabled>List For Sale</button>
+        </div>
+        <div id="result-market-list-sale"></div>
+      </div>
+
+      <!-- Marketplace Purchase -->
+      <div class="test-panel" id="panel-market-purchase">
+        <h2>Marketplace: Purchase</h2>
+        <p class="description">Purchase a listed ordinal from the marketplace.</p>
+        <div class="form-group">
+          <label>Listing Outpoint</label>
+          <input id="mkt-purchase-outpoint" placeholder="From listing" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="market-purchase" disabled>Purchase Ordinal</button>
+        </div>
+        <div id="result-market-purchase"></div>
+      </div>
+
+      <!-- Marketplace Cancel -->
+      <div class="test-panel" id="panel-market-cancel">
+        <h2>Marketplace: Cancel Listing</h2>
+        <p class="description">Cancel an existing marketplace listing and reclaim the ordinal.</p>
+        <div class="form-group">
+          <label>Listing Outpoint</label>
+          <input id="mkt-cancel-outpoint" placeholder="From listing" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-danger" data-test="market-cancel" disabled>Cancel Listing</button>
+        </div>
+        <div id="result-market-cancel"></div>
+      </div>
+
+      <!-- Unified Mint -->
+      <div class="test-panel" id="panel-unified-mint">
+        <h2>Unified: mintToken()</h2>
+        <p class="description">Create any token type via the unified API with discriminated standard field.</p>
+        <div class="form-group">
+          <label>Standard</label>
+          <select id="uni-mint-standard">
+            <option value="pushdrop">PushDrop</option>
+            <option value="ordinal">Ordinal</option>
+            <option value="bsv-21">BSV-21</option>
+            <option value="bsv-20">BSV-20</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Options (JSON)</label>
+          <textarea id="uni-mint-options" rows="5">{"data": {"test": "unified-mint"}, "basket": "test-tokens"}</textarea>
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="unified-mint" disabled>Mint Token</button>
+        </div>
+        <div id="result-unified-mint"></div>
+      </div>
+
+      <!-- Unified List -->
+      <div class="test-panel" id="panel-unified-list">
+        <h2>Unified: listTokens()</h2>
+        <p class="description">List tokens across all standards, or filter by standard/basket.</p>
+        <div class="form-group">
+          <label>Standard (optional)</label>
+          <select id="uni-list-standard">
+            <option value="">All Standards</option>
+            <option value="pushdrop">PushDrop</option>
+            <option value="ordinal">Ordinal</option>
+            <option value="bsv-21">BSV-21</option>
+            <option value="bsv-20">BSV-20</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Basket (optional)</label>
+          <input id="uni-list-basket" placeholder="Leave empty for default" />
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="unified-list" disabled>List Tokens</button>
+        </div>
+        <div id="result-unified-list"></div>
+      </div>
+
+      <!-- Unified Transfer -->
+      <div class="test-panel" id="panel-unified-transfer">
+        <h2>Unified: transferToken()</h2>
+        <p class="description">Transfer any token type via the unified API.</p>
+        <div class="form-group">
+          <label>Basket</label>
+          <input id="uni-transfer-basket" value="test-tokens" />
+        </div>
+        <div class="form-group">
+          <label>Outpoint</label>
+          <input id="uni-transfer-outpoint" placeholder="From list" />
+        </div>
+        <div class="form-group">
+          <label>Recipient Key (empty = self)</label>
+          <input id="uni-transfer-to" placeholder="02..." />
+        </div>
+        <div class="form-group">
+          <label>Standard (optional)</label>
+          <select id="uni-transfer-standard">
+            <option value="">Auto-detect</option>
+            <option value="pushdrop">PushDrop</option>
+            <option value="ordinal">Ordinal</option>
+            <option value="bsv-21">BSV-21</option>
+            <option value="bsv-20">BSV-20</option>
+          </select>
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-primary" data-test="unified-transfer" disabled>Transfer Token</button>
+        </div>
+        <div id="result-unified-transfer"></div>
+      </div>
+
+      <!-- Unified Burn -->
+      <div class="test-panel" id="panel-unified-burn">
+        <h2>Unified: burnToken()</h2>
+        <p class="description">Burn any token type via the unified API.</p>
+        <div class="form-group">
+          <label>Basket</label>
+          <input id="uni-burn-basket" value="test-tokens" />
+        </div>
+        <div class="form-group">
+          <label>Outpoint</label>
+          <input id="uni-burn-outpoint" placeholder="From list" />
+        </div>
+        <div class="form-group">
+          <label>Standard (optional)</label>
+          <select id="uni-burn-standard">
+            <option value="">Auto-detect</option>
+            <option value="pushdrop">PushDrop</option>
+            <option value="ordinal">Ordinal</option>
+            <option value="bsv-21">BSV-21</option>
+            <option value="bsv-20">BSV-20</option>
+          </select>
+        </div>
+        <div class="action-bar">
+          <button class="btn btn-danger" data-test="unified-burn" disabled>Burn Token</button>
+        </div>
+        <div id="result-unified-burn"></div>
+      </div>
+    </main>
+
+    <!-- Event Log -->
+    <aside class="event-log">
+      <div class="event-log-header">
+        <h3>Event Monitor</h3>
+        <button id="btn-clear-log">Clear</button>
+      </div>
+      <div id="log-entries"></div>
+      <div id="stats-bar">
+        <span>Tests: <span class="stat-value" id="stat-total">0</span></span>
+        <span>Pass: <span class="stat-value stat-pass" id="stat-pass">0</span></span>
+        <span>Fail: <span class="stat-value stat-fail" id="stat-fail">0</span></span>
+        <span>Time: <span class="stat-value" id="stat-time">0ms</span></span>
+      </div>
+    </aside>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
