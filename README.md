@@ -1,5 +1,9 @@
 # @bsv/simple
 
+> **⚠️ This repository is being archived.**
+>
+> Development has moved to the [ts-stack monorepo](https://github.com/bsv-blockchain/ts-stack/tree/main/packages/helpers/simple). Open issues will be migrated there. This repository will be archived in the coming days — please open new issues and PRs in the monorepo going forward.
+
 A high-level TypeScript library that makes BSV blockchain development simple. Build wallets, send payments, create tokens, issue credentials, and more — in just a few lines of code.
 
 ## What is @bsv/simple?
